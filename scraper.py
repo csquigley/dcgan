@@ -34,73 +34,74 @@ def strip_image_url(url):
 #instantiate driver
 driver = uc.Chrome(version_main=98)
 #attempt to get google images
-try:
-    driver.get(base_url)
-except Exception as e:
-    print("base_url didn't work")
-    print(e)
-#find the google search box and select it
-try:
-    google_input = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.XPATH, xpath)))
-except Exception as e:
-    #try the alternative xpath if the initial xpath doesn't work
+for st in search_terms:
     try:
-        google_input = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.XPATH, full_xpath)))
+        driver.get(base_url)
+    except Exception as e:
+        print("base_url didn't work")
+        print(e)
+    #find the google search box and select it
+    try:
+        google_input = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.XPATH, xpath)))
+    except Exception as e:
+        #try the alternative xpath if the initial xpath doesn't work
+        try:
+            google_input = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.XPATH, full_xpath)))
+        except Exception as e:
+            print(e)
+
+    try:
+        #enter the search terms and click the enter key
+        google_input.send_keys(st)
+        sltime = 3*random.random()
+        time.sleep(sltime)
+        google_input.send_keys(Keys.ENTER)
+    except Exception as e:
+        print(e)
+    #sleep for 5 seconds to help ensure the page loads.
+    time.sleep(5)
+    #scroll to the bottom of  the search results
+    for i in range(10):
+        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+        sltime = 5*random.random()
+        time.sleep(sltime)
+    #get the xpath of all the photos on the page
+    try:
+        urls = WebDriverWait(driver,30).until(EC.presence_of_all_elements_located((By.XPATH,photo_xpath)))
+        print(f"Total Links: {len(urls)}")
+        time.sleep(5)
     except Exception as e:
         print(e)
 
-try:
-    #enter the search terms and click the enter key
-    google_input.send_keys(search_terms)
-    sltime = 3*random.random()
-    time.sleep(sltime)
-    google_input.send_keys(Keys.ENTER)
-except Exception as e:
-    print(e)
-#sleep for 5 seconds to help ensure the page loads.
-time.sleep(5)
-#scroll to the bottom of  the search results
-for i in range(10):
-    driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-    sltime = 5*random.random()
-    time.sleep(sltime)
-#get the xpath of all the photos on the page
-try:
-    urls = WebDriverWait(driver,30).until(EC.presence_of_all_elements_located((By.XPATH,photo_xpath)))
-    print(f"Total Links: {len(urls)}")
-    time.sleep(5)
-except Exception as e:
-    print(e)
-
-for i,el in enumerate(urls):
-    i = i + start
-    if i < len(urls):
-        time.sleep(5*random.random())
-        try:
-            #photo previews must be clicked to load  the link
-            el.click()
-            #after clicking, get the href (source) of the photo
-            href = el.get_attribute('href')
-            #pass the result into the function designed above.
-            href = strip_image_url(href)
-            #get the final three characters
-            filetype = href[-3:].lower()
-            #check if the type is in filetypes
-            if filetype not in common_file_types:
+    for i,el in enumerate(urls):
+        i = i + start
+        if i < len(urls):
+            time.sleep(5*random.random())
+            try:
+                #photo previews must be clicked to load  the link
+                el.click()
+                #after clicking, get the href (source) of the photo
                 href = el.get_attribute('href')
-                #if it isn't print the href to find out why
-                print(href)
-            else:
-                #get the photo with request and
-                f = requests.get(href,allow_redirects=True)
-                path_name = f"photos/photo_{i}.{filetype}"
-                open(path_name,'wb').write(f.content)
-                time.sleep(5*random.random())
+                #pass the result into the function designed above.
+                href = strip_image_url(href)
+                #get the final three characters
+                filetype = href[-3:].lower()
+                #check if the type is in filetypes
+                if filetype not in common_file_types:
+                    href = el.get_attribute('href')
+                    #if it isn't print the href to find out why
+                    print(href)
+                else:
+                    #get the photo with request and
+                    f = requests.get(href,allow_redirects=True)
+                    path_name = f"photos/photo_{i}.{filetype}"
+                    open(path_name,'wb').write(f.content)
+                    time.sleep(5*random.random())
 
-        except Exception as e:
-            print(e)
-    else:
-        break
+            except Exception as e:
+                print(e)
+        else:
+            break
 
 time.sleep(25)
 driver.close()
